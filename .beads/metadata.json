@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "server",
+  "dolt_database": "nobsppt",
+  "project_id": "9469860c-0799-44bd-aa51-65c24b4aee4a"
+}
