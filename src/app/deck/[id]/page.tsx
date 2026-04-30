@@ -6,6 +6,7 @@ import { requireAuth } from "@/lib/auth/guard";
 import { db } from "@/lib/db";
 import { decks } from "@/lib/db/schema";
 import DeckViewer from "@/components/decks/DeckViewer";
+import ShareButton from "@/components/decks/ShareButton";
 
 interface PageProps {
   params: { id: string };
@@ -35,6 +36,7 @@ export default async function DeckPage({ params }: PageProps) {
       slides: decks.slides,
       theme: decks.theme,
       createdAt: decks.createdAt,
+      shareToken: decks.shareToken,
     })
     .from(decks)
     .where(and(eq(decks.id, id), eq(decks.userId, session.userId)))
@@ -53,7 +55,8 @@ export default async function DeckPage({ params }: PageProps) {
       >
         ← Dashboard
       </Link>
-      {/* Share + Export PDF buttons will be added by Story 3.1 and 3.2 */}
+      <ShareButton deckId={id} initialShareToken={deck.shareToken} />
+      {/* Export PDF button will be added by Story 3.2 */}
     </>
   );
 

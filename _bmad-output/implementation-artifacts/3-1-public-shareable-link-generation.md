@@ -64,14 +64,27 @@ so that anyone can view it without needing an account.
 
 ### Agent Model Used
 
-_to be filled_
+claude-sonnet-4-6
 
 ### Debug Log References
 
+No debug issues — clean pass.
+
 ### Completion Notes List
 
-- Document public route path — Stories 3.2 and 3.3 extend it.
-- Document og:image generation approach — may need deps update.
-- Document share token / `is_public` DB field — Story 3.2 reads it.
+- **Public route**: `/s/[token]` — `src/app/s/[token]/page.tsx`. SSR (`force-dynamic`). No auth. Fetches by `decks.shareToken`. `notFound()` for missing/unshared decks. Stories 3.2 and 3.3 extend via `headerActions` prop.
+- **Share token approach**: `decks.shareToken` (varchar 255, unique, nullable) already in schema from Story 1.3 stub. No new column added. Token presence = deck is public. No separate `isPublic` boolean needed.
+- **og:image**: `src/app/api/og/route.tsx` — Next.js `ImageResponse` (Satori, no extra deps beyond Next.js). Renders title + first slide bullets at 1200×630. `runtime = "nodejs"` required for db access.
+- **Share button**: `src/components/decks/ShareButton.tsx` — client component in creator headerActions. POST `/api/decks/[id]/share` → sets token → copies `${origin}/s/${token}`. Idempotent: existing token skips db write.
+- **Clipboard**: `navigator.clipboard.writeText()` with `execCommand("copy")` fallback.
+- **Middleware**: `/deck` added to `PROTECTED_PATHS` (was missing; page-level `requireAuth()` was correct but middleware is edge-level guard).
 
 ### File List
+
+- `src/app/api/decks/[id]/share/route.ts` — POST share endpoint
+- `src/components/decks/ShareButton.tsx` — creator share button (client component)
+- `src/app/deck/[id]/page.tsx` — updated: fetch shareToken, inject ShareButton
+- `src/app/s/[token]/page.tsx` — public SSR deck viewer (no auth)
+- `src/app/api/og/route.tsx` — og:image via Next.js ImageResponse
+- `src/middleware.ts` — `/deck` added to PROTECTED_PATHS
+- `tests/decks/share.test.ts` — share API tests (5 cases)
