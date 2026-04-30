@@ -1,6 +1,6 @@
 # Story 2.1: Text & Outline Input Interface
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -59,13 +59,42 @@ so that I can start creating a deck from my raw content.
 
 ### Agent Model Used
 
-_to be filled_
+claude-sonnet-4-6
 
 ### Debug Log References
 
+None — all 57 tests passed on first run, 0 TypeScript errors.
+
 ### Completion Notes List
 
-- Document input data format sent to generation API — Story 2.2 agent must match this exactly.
-- Document `/create` route path — Story 2.2 agent extends this page.
+- **Route:** `/create` — auth-protected via `requireAuth()` (same pattern as dashboard).
+- **Counter:** Pre-computed `deck_count` from users table — `getFreeDecksRemaining(deckCount)` in `src/lib/decks/validation.ts`. `FREE_DECK_LIMIT = 3`. Paid users see no counter (null).
+- **Mode switch:** Both `textContent` and `outlineContent` live as independent `useState` values in `DeckInputForm`. Switching mode only changes which textarea renders — the other retains its value.
+- **Validation:** `validateDeckInput(content)` — trims and checks non-empty. Called on generate click; inline error shown via `role="alert"` paragraph.
+
+**CRITICAL — GenerationPayload sent to POST /api/decks/generate (Story 2.2 must match exactly):**
+
+```typescript
+// src/lib/decks/validation.ts
+export interface GenerationPayload {
+  mode: "text" | "outline";
+  content: string;
+  // "text" mode: freeform prose / pasted notes (raw string)
+  // "outline" mode: newline-separated lines, hierarchy via leading dashes/spaces
+  //   e.g. "Intro\n- Background\nMain\n- Point 1"
+  //   Story 2.2 parses outline structure server-side.
+}
+```
+
+Story 2.2 wires `handleGenerate()` in `DeckInputForm` — the stub is at `src/components/decks/DeckInputForm.tsx:35` (replace the `console.log` with the real `fetch` call to `/api/decks/generate`).
 
 ### File List
+
+**New files created:**
+
+```
+src/app/create/page.tsx
+src/components/decks/DeckInputForm.tsx
+src/lib/decks/validation.ts
+tests/decks/validation.test.ts
+```
