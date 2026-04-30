@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromRequest } from "@/lib/auth/session";
 
 // Routes that require authentication
-const PROTECTED_PATHS = ["/dashboard", "/decks", "/create", "/upgrade", "/deck"];
+const PROTECTED_PATHS = ["/dashboard", "/decks", "/create", "/upgrade", "/deck", "/account", "/admin"];
 
 // Auth routes — redirect to dashboard if already logged in
 const AUTH_PATHS = ["/register", "/login"];

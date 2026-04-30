@@ -59,14 +59,41 @@ so that I can monitor product health and business performance.
 
 ### Agent Model Used
 
-_to be filled_
+claude-sonnet-4-6
 
 ### Debug Log References
 
+No debug issues — clean pass.
+
 ### Completion Notes List
 
-- Document admin middleware path — Stories 5.2 and 5.3 reuse it.
-- Document admin role field and how to promote user to admin.
-- Document metrics API endpoint — Stories 5.2 and 5.3 extend the admin API.
+**Admin guard (Stories 5.2 and 5.3 MUST use this):**
+
+| Function | File | Purpose |
+|----------|------|---------|
+| `requireAdmin()` | `src/lib/auth/admin-guard.ts` | Server component guard — redirects to `/login` (no session) or `/dashboard` (not admin). Returns `SessionPayload`. |
+| `getAdminSession()` | `src/lib/auth/admin-guard.ts` | API route guard — returns `{ session, status: "ok" }` or `{ session: null, status: 401\|403 }`. Stories 5.2 and 5.3 call this at the top of every `/api/admin/*` handler. |
+
+**Admin role field:**
+- Column: `role` (`user_role` enum: `"user"` | `"admin"`) on `users` table, default `"user"`, NOT NULL
+- Added in `src/lib/db/schema.ts` as `userRoleEnum` + `users.role` field
+- Role is NOT stored in the JWT session (avoids stale-role in 7-day tokens). Role is fetched fresh from DB on each admin request.
+- **To promote to admin:** `UPDATE users SET role = 'admin' WHERE email = 'you@example.com';` (direct DB). User must re-login for any session-cached data to refresh (role is not cached in session, so re-login not strictly required here).
+
+**Metrics API (Stories 5.2 and 5.3 extend `/api/admin/*`):**
+- `GET /api/admin/metrics` → `{ metrics: { totalDecks, totalUsers, totalPaid, conversions } }`
+- `conversions` definition: paid users with `deck_count >= 1` (MVP — simpler than cohort analysis)
+- All 4 queries run in `Promise.all()` for sub-100ms response
+- `force-dynamic` on admin page — no caching, live data every load (AC3)
+
+**Middleware:** `/admin` added to `PROTECTED_PATHS` in `src/middleware.ts`. Edge middleware redirects unauthenticated users to `/login`. Role check (admin vs user) is NOT in Edge middleware (cannot do DB in Edge) — it happens in `requireAdmin()` / `getAdminSession()` at page/API level.
 
 ### File List
+
+- `src/lib/db/schema.ts` — added `userRoleEnum` + `users.role` column
+- `src/lib/auth/admin-guard.ts` — `requireAdmin()` (server components) + `getAdminSession()` (API routes)
+- `src/app/api/admin/metrics/route.ts` — GET metrics endpoint
+- `src/app/admin/page.tsx` — admin dashboard (4 metric cards, live data)
+- `src/middleware.ts` — `/admin` added to PROTECTED_PATHS
+- `tests/admin/metrics.test.ts` — 5 metrics API tests
+- `tests/admin/admin-guard.test.ts` — 4 admin-guard unit tests

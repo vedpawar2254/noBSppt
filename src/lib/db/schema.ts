@@ -11,6 +11,9 @@ import {
 
 export const subscriptionStatusEnum = pgEnum("subscription_status", ["free", "paid"]);
 
+// Story 5.1 — admin access control
+export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
+
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: varchar("email", { length: 255 }).notNull().unique(),
@@ -22,6 +25,10 @@ export const users = pgTable("users", {
   // Story 4.3 reads stripeCustomerId for subscription management / cancellation
   stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
   stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
+  // Story 4.3: when cancel_at_period_end is set, store end date so UI can display "access until [date]"
+  subscriptionCancelAt: timestamp("subscription_cancel_at"),
+  // Story 5.1 — role-based access; promote via: UPDATE users SET role='admin' WHERE email='you@example.com'
+  role: userRoleEnum("role").default("user").notNull(),
 });
 
 export type User = typeof users.$inferSelect;
