@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { getSession } from "@/lib/auth/session";
-import { redirect } from "next/navigation";
+import { requireAuth } from "@/lib/auth/guard";
+import LogoutButton from "@/components/auth/LogoutButton";
 
 export const metadata: Metadata = {
   title: "Dashboard — nobsppt",
@@ -9,16 +9,20 @@ export const metadata: Metadata = {
 
 // Auth-protected stub — deck history and content added in Story 1.3
 export default async function DashboardPage() {
-  const session = await getSession();
-  if (!session) redirect("/login");
+  const session = await requireAuth();
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-4">
-      <h1 className="text-2xl font-semibold mb-2">Welcome back</h1>
-      <p className="text-gray-600 text-sm mb-6">{session.email}</p>
-      <p className="text-sm text-gray-400">
-        Deck generation and history coming in Epic 2 and Story 1.3.
-      </p>
+      <div className="w-full max-w-lg">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-2xl font-semibold">Dashboard</h1>
+          <LogoutButton />
+        </div>
+        <p className="text-gray-600 text-sm mb-6">{session.email}</p>
+        <p className="text-sm text-gray-400">
+          Deck generation and history coming in Epic 2 and Story 1.3.
+        </p>
+      </div>
     </main>
   );
 }
