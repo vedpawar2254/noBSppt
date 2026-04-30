@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { decks } from "@/lib/db/schema";
 import DeckViewer from "@/components/decks/DeckViewer";
 import ShareButton from "@/components/decks/ShareButton";
+import ExportButton from "@/components/decks/ExportButton";
 
 interface PageProps {
   params: { id: string };
@@ -56,7 +57,7 @@ export default async function DeckPage({ params }: PageProps) {
         ← Dashboard
       </Link>
       <ShareButton deckId={id} initialShareToken={deck.shareToken} />
-      {/* Export PDF button will be added by Story 3.2 */}
+      <ExportButton deckId={id} />
     </>
   );
 

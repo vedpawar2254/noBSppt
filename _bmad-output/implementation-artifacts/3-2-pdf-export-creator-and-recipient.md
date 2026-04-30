@@ -61,13 +61,27 @@ so that I can share or present it offline.
 
 ### Agent Model Used
 
-_to be filled_
+claude-sonnet-4-6
 
 ### Debug Log References
 
+- `TS2345` in export route: `Buffer` not assignable to `BodyInit` in `new NextResponse(pdfBuffer, ...)`. Fixed by wrapping: `new Uint8Array(pdfBuffer)`.
+- Pre-existing Story 4.x TS errors in subscription routes (`current_period_end` on Stripe type) — not Story 3.2 scope.
+
 ### Completion Notes List
 
-- Document PDF library chosen — Story 5.3 (error diagnosis) references PDF export failures.
-- Document export endpoint path — Story 5.3 admin logs need it.
+- **PDF library**: `pdfkit` v0.18.0 (pure Node.js, no browser binary, no cold-start penalty). Story 5.3 can correlate export errors with `[pdf-export]` console log lines (`deckId`, `slides`, `latency`).
+- **Export endpoint**: `GET /api/decks/[id]/export?token=<shareToken>` — `src/app/api/decks/[id]/export/route.ts`. `runtime = "nodejs"` required (pdfkit + db). Auth: owner session OR matching `shareToken` query param. Logs latency for NFR4 monitoring.
+- **PDF generation module**: `src/lib/pdf/generator.ts` — `generateDeckPdf(title, slides)` returns `Promise<Buffer>`. Page size 1190×669 (16:9). Styles match DeckViewer default theme (Helvetica-Bold titles, #111827; bullet text #374151; dot #D1D5DB). One slide per page.
+- **ExportButton**: `src/components/decks/ExportButton.tsx` — `deckId` + optional `shareToken`. Fetch → blob → programmatic `<a>` download. Loading state disables button during export (AC3).
+- **Public export** (AC2): `ExportButton` in `/s/[token]` passes `shareToken` prop → endpoint verifies token, no session needed.
+- **Creator export** (AC1): `ExportButton` in `/deck/[id]` with no shareToken → endpoint verifies ownership via session.
 
 ### File List
+
+- `src/lib/pdf/generator.ts` — PDF generation module (pdfkit)
+- `src/app/api/decks/[id]/export/route.ts` — GET export endpoint (owner + public)
+- `src/components/decks/ExportButton.tsx` — export button client component
+- `src/app/deck/[id]/page.tsx` — updated: ExportButton added to headerActions
+- `src/app/s/[token]/page.tsx` — updated: disabled stub → real ExportButton with shareToken
+- `tests/decks/export.test.ts` — 5 tests (401, 404, owner 200, public 200, bad token 404)

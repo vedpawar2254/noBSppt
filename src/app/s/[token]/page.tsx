@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { decks } from "@/lib/db/schema";
 import DeckViewer from "@/components/decks/DeckViewer";
+import ExportButton from "@/components/decks/ExportButton";
 
 interface PageProps {
   params: { token: string };
@@ -63,15 +64,9 @@ export default async function PublicDeckPage({ params }: PageProps) {
     notFound();
   }
 
-  // Public viewer — no auth chrome. PDF export stub for Story 3.2.
+  // Public viewer — no auth chrome. Export uses shareToken for unauthenticated access (AC2).
   const headerActions = (
-    <button
-      disabled
-      className="text-sm px-3 py-1.5 border border-gray-200 rounded text-gray-400 cursor-not-allowed"
-      title="PDF export coming soon"
-    >
-      Export PDF
-    </button>
+    <ExportButton deckId={deck.id} shareToken={token} />
   );
 
   return (
