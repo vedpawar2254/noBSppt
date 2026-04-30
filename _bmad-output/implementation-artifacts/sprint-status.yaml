@@ -71,3 +71,11 @@ development_status:
   5-2-user-account-and-activity-inspection: ready-for-dev
   5-3-generation-log-access-and-error-diagnosis: ready-for-dev
   epic-5-retrospective: optional
+
+  epic-6: backlog
+  6-1-openrouter-integration: ready-for-dev
+  6-2-razorpay-checkout: ready-for-dev
+  6-3-razorpay-subscription-management: ready-for-dev
+  6-4-deck-view-and-visitor-analytics: ready-for-dev
+  6-5-ci-pipeline: ready-for-dev
+  epic-6-retrospective: optional

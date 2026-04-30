@@ -482,6 +482,116 @@ So that I can diagnose errors and review output quality.
 **When** I access its log entry
 **Then** I can see the input submitted and the generation outcome
 
+---
+
+## Epic 6: Platform & Infrastructure
+
+Migrate AI routing to OpenRouter, replace Stripe with Razorpay for INR payments, add deck view analytics, and establish a CI pipeline. All stories are independent of each other except 6.3 depends on 6.2.
+
+### Story 6.1: OpenRouter AI Integration
+
+As a developer,
+I want the restraint engine to route AI requests through OpenRouter,
+so that I can switch models and avoid single-provider lock-in without rewriting generation logic.
+
+**Acceptance Criteria:**
+
+**Given** the generation endpoint is called
+**When** a deck is generated
+**Then** the request routes through OpenRouter — output quality and format are identical to direct Anthropic
+
+**Given** OpenRouter is configured
+**When** the model is changed via `OPENROUTER_MODEL` environment variable
+**Then** generation uses the new model with no code changes required
+
+**Given** an OpenRouter API call fails
+**When** the failure occurs
+**Then** the same error handling from Story 2.2 applies — clear error, input preserved (NFR11, NFR12)
+
+### Story 6.2: Razorpay Subscription Checkout
+
+As a user who has reached the free limit,
+I want to subscribe via Razorpay,
+so that I can pay in INR using Indian payment methods without being routed to a foreign processor.
+
+**Acceptance Criteria:**
+
+**Given** I am on the upgrade prompt
+**When** I click subscribe
+**Then** a Razorpay checkout modal opens — no card data passes through nobsppt servers
+
+**Given** I complete payment
+**When** Razorpay confirms via signature verification and webhook
+**Then** my account is upgraded to paid and I can generate decks without restriction
+
+**Given** I abandon checkout or payment fails
+**When** I return to the app
+**Then** my account remains on the free tier
+
+### Story 6.3: Razorpay Subscription Management
+
+As a subscribed user,
+I want to view and cancel my Razorpay subscription,
+so that I have full billing control through the same provider I subscribed with.
+
+**Acceptance Criteria:**
+
+**Given** I navigate to billing settings
+**When** the page loads
+**Then** I see my current plan, billing status, and next billing date pulled from Razorpay API
+
+**Given** I click cancel and confirm
+**When** the cancellation is processed
+**Then** `cancel_at_cycle_end: 1` is set — I retain paid access until the current period ends
+
+**Given** my subscription period ends
+**When** Razorpay fires the cancellation webhook
+**Then** my account is downgraded to free
+
+### Story 6.4: Deck View & Visitor Analytics
+
+As a deck creator and as an admin,
+I want to see how many times my shared decks have been viewed,
+so that I can understand whether my decks are reaching their audience.
+
+**Acceptance Criteria:**
+
+**Given** a shared deck is viewed via its public URL
+**When** the page loads
+**Then** a view event is recorded (deck ID, timestamp, anonymous visitor ID)
+
+**Given** I am a creator viewing my deck
+**When** I check deck stats
+**Then** I see total views and unique visitor count for that deck
+
+**Given** I am an admin
+**When** I view the admin dashboard
+**Then** I see platform-wide total views and the top 5 most-viewed decks
+
+**Given** the same visitor refreshes a shared deck within 30 minutes
+**When** the repeat view is detected
+**Then** it does not count as a new unique visit
+
+### Story 6.5: CI Pipeline
+
+As a developer,
+I want automated checks to run on every push and pull request,
+so that broken code never reaches main undetected.
+
+**Acceptance Criteria:**
+
+**Given** a push or pull request to any branch
+**When** the pipeline runs
+**Then** type check, lint, and full test suite all execute and must pass
+
+**Given** a push to main
+**When** the pipeline runs
+**Then** a production build check (`next build`) also runs after tests pass
+
+**Given** the pipeline passes
+**When** it completes
+**Then** a status badge on the README reflects the current CI state
+
 ## Epic List
 
 ### Epic 1: Project Foundation & User Authentication
@@ -507,3 +617,7 @@ System enforces the 3-deck free limit. On reaching the limit, user is shown an u
 ### Epic 5: Admin Dashboard
 Admin can view platform-wide deck volume, conversion metrics (free-to-paid), individual user activity, and generation logs for error diagnosis and quality review.
 **FRs covered:** FR28, FR29, FR30, FR31
+
+### Epic 6: Platform & Infrastructure
+Migrate AI routing to OpenRouter, replace Stripe with Razorpay for INR payments, add deck view analytics, and establish a CI pipeline.
+**FRs covered:** (post-MVP platform improvements — not in original FR set)
