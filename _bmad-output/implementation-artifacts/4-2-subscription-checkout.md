@@ -1,6 +1,6 @@
 # Story 4.2: Subscription Checkout
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -66,14 +66,75 @@ so that I can continue generating decks.
 
 ### Agent Model Used
 
-_to be filled_
+claude-sonnet-4-6
 
 ### Debug Log References
 
+- TS2322 in `src/lib/stripe/client.ts`: `apiVersion: "2024-06-20"` rejected — Stripe SDK now uses semantic versions. Fixed to `"2026-04-22.dahlia"`.
+
+All 117 tests passed after fix. 0 TypeScript errors.
+
 ### Completion Notes List
 
-- Document stripe_customer_id field added to user schema — Story 4.3 needs it for cancellation.
-- Document webhook endpoint path — Story 5.3 (admin logs) may reference webhook events.
-- Document subscription plan/price ID — Story 4.3 reads it for display.
+**Stripe integration (ALL future agents reference this):**
+
+| Aspect | Value |
+|--------|-------|
+| SDK | `stripe` (latest) |
+| API version | `"2026-04-22.dahlia"` |
+| Client singleton | `src/lib/stripe/client.ts` |
+| Env vars | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID` |
+| Webhook path | `POST /api/webhooks/stripe` |
+| Checkout endpoint | `POST /api/subscription/checkout` |
+| Checkout mode | `subscription` (hosted — NFR7 compliance, no card data through nobsppt) |
+
+**User schema additions (Story 4.3 needs these):**
+
+| Field | Column | Type | Purpose |
+|-------|--------|------|---------|
+| `stripeCustomerId` | `stripe_customer_id` | `VARCHAR(255)` nullable | Story 4.3: cancel/manage via Stripe API |
+| `stripeSubscriptionId` | `stripe_subscription_id` | `VARCHAR(255)` nullable | Story 4.3: identify active subscription |
+
+**Upgrade flow:**
+1. User hits paywall → PaywallModal → "Upgrade now" → `/upgrade`
+2. `/upgrade` page → "Subscribe" button → `POST /api/subscription/checkout`
+3. Checkout endpoint creates Stripe Checkout Session → returns `{ url }`
+4. Client: `window.location.href = url` → Stripe-hosted checkout
+5. On success: Stripe fires `checkout.session.completed` webhook → `/api/webhooks/stripe`
+6. Webhook (signature verified) sets `subscription_status = 'paid'`, stores `stripeCustomerId` + `stripeSubscriptionId`
+7. User redirected to `/create?upgraded=true`
+
+**Webhook → source of truth rule:** User is NEVER upgraded on the success redirect alone. Only `checkout.session.completed` with valid Stripe signature triggers the DB update.
+
+**Idempotency:** Webhook checks `subscriptionStatus !== 'paid'` before updating. Duplicate events are safe.
+
+**Subscription plan:** `STRIPE_PRICE_ID` env var (set in Stripe Dashboard). Story 4.3 can display plan details by fetching from Stripe using `stripeCustomerId`.
+
+**Cancel URL:** `/create` — user returns to create page with input preserved in component state (DeckInputForm never resets on navigation).
+
+**Downgrade path:** `customer.subscription.deleted` → sets `subscription_status = 'free'`. Future: `customer.subscription.updated` for payment failures.
+
+**Middleware:** `/upgrade` and `/deck` added to `PROTECTED_PATHS` in `src/middleware.ts`.
 
 ### File List
+
+**New files created:**
+
+```
+src/lib/stripe/client.ts
+src/app/api/subscription/checkout/route.ts
+src/app/api/webhooks/stripe/route.ts
+src/app/upgrade/page.tsx
+src/app/upgrade/CheckoutButton.tsx
+tests/subscription/checkout.test.ts    — 8 tests
+tests/subscription/webhook.test.ts     — 9 tests
+```
+
+**Files modified:**
+
+```
+src/lib/db/schema.ts        — added stripeCustomerId, stripeSubscriptionId to users
+src/middleware.ts           — added /upgrade to PROTECTED_PATHS
+.env.example                — added STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_ID
+package.json                — added stripe dependency
+```

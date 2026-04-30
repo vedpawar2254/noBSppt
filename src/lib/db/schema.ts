@@ -18,6 +18,10 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   subscriptionStatus: subscriptionStatusEnum("subscription_status").default("free").notNull(),
   deckCount: integer("deck_count").default(0).notNull(),
+  // Stripe — populated on first successful checkout (Story 4.2)
+  // Story 4.3 reads stripeCustomerId for subscription management / cancellation
+  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
+  stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
 });
 
 export type User = typeof users.$inferSelect;
