@@ -2,6 +2,8 @@
 
 > AI slides that don't embarrass you in the boardroom.
 
+[![CI](https://github.com/vedpawar2254/noBSppt/actions/workflows/ci.yml/badge.svg)](https://github.com/vedpawar2254/noBSppt/actions/workflows/ci.yml)
+
 ---
 
 ## What is this
