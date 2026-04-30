@@ -1,6 +1,6 @@
 # Story 4.1: Free Deck Limit Enforcement & Paywall
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -63,13 +63,51 @@ so that I understand my options before I can generate more decks.
 
 ### Agent Model Used
 
-_to be filled_
+claude-sonnet-4-6
 
 ### Debug Log References
 
+None — 94/94 tests passed, 0 TypeScript errors.
+
 ### Completion Notes List
 
-- Confirm deck_count increment behavior — Story 4.2 and 5.1 read this.
-- Document paywall route/modal — Story 4.2 checkout links from here.
+**Backend enforcement (Story 2.2 already implemented — verified correct):**
+
+- Paywall check in `src/app/api/decks/generate/route.ts` lines 36–53:
+  - Reads `users.deckCount` and `users.subscriptionStatus` before calling AI
+  - `isFree && deckCount >= FREE_DECK_LIMIT (3)` → 402 `{ error, code: "PAYWALL" }`
+  - Paid users bypass entirely (any deck_count)
+- `deck_count` increment in `src/app/api/decks/generate/route.ts` lines 77–97:
+  - Atomic DB transaction: deck insert + `deck_count + 1` in one tx
+  - If either fails, neither commits (no phantom increments)
+
+**Paywall UI (Story 4.1 added):**
+
+- `src/components/decks/PaywallModal.tsx` — modal component
+  - Backdrop click dismisses (input still in component state — AC2 preservation)
+  - "Upgrade now" CTA → `/upgrade` (Story 4.2 creates this route)
+  - "Maybe later" dismiss → returns to create page, input intact
+- `DeckInputForm` wired: 402 response → `setShowPaywall(true)` instead of inline error
+
+**Story 4.2 note:** Paywall CTA links to `/upgrade`. Story 4.2 must create that route/page.
+
+**deck_count behavior (Story 4.2 and 5.1 must know):**
+- Incremented atomically on EVERY successful generation (free and paid users)
+- For free users: enforced at `>= 3` (hard-coded `FREE_DECK_LIMIT` in `src/lib/decks/validation.ts`)
+- For paid users: incremented but limit not enforced — purely for analytics
 
 ### File List
+
+**New files created:**
+
+```
+src/components/decks/PaywallModal.tsx
+tests/decks/paywall.test.ts
+```
+
+**Files modified:**
+
+```
+src/components/decks/DeckInputForm.tsx  — import PaywallModal, showPaywall state, wire 402 → modal
+_bmad-output/implementation-artifacts/4-1-free-deck-limit-enforcement-and-paywall.md
+```

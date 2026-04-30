@@ -7,6 +7,7 @@ import {
   type GenerationPayload,
   validateDeckInput,
 } from "@/lib/decks/validation";
+import PaywallModal from "@/components/decks/PaywallModal";
 
 export default function DeckInputForm() {
   const router = useRouter();
@@ -15,6 +16,7 @@ export default function DeckInputForm() {
   const [outlineContent, setOutlineContent] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
 
   const activeContent = mode === "text" ? textContent : outlineContent;
 
@@ -55,8 +57,8 @@ export default function DeckInputForm() {
       }
 
       if (res.status === 402) {
-        // Paywall — Epic 4 will provide proper UX; for now surface the message
-        setError("You've used all 3 free decks. Upgrade to continue generating.");
+        // Story 4.1: show paywall modal — input remains in state (AC2 input preservation)
+        setShowPaywall(true);
       } else {
         // NFR11: clear error. NFR12: input preserved in state — user can retry immediately.
         setError(data.error ?? "Generation failed. Please try again.");
@@ -70,6 +72,9 @@ export default function DeckInputForm() {
   }
 
   return (
+    <>
+      {/* Story 4.1: paywall modal — shown when free limit reached (AC2, AC3) */}
+      {showPaywall && <PaywallModal onDismiss={() => setShowPaywall(false)} />}
     <div className="space-y-4">
       {/* Mode toggle */}
       <div className="flex gap-1 border border-gray-200 rounded-md p-1 w-fit" role="group" aria-label="Input mode">
@@ -158,5 +163,6 @@ export default function DeckInputForm() {
         </p>
       )}
     </div>
+    </>
   );
 }
