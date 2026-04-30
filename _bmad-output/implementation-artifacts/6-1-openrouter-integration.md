@@ -1,6 +1,6 @@
 # Story 6.1: OpenRouter AI Integration
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -71,13 +71,24 @@ so that I can switch models, compare costs, and avoid single-provider lock-in wi
 
 ### Agent Model Used
 
-_to be filled_
+claude-sonnet-4-6
 
 ### Debug Log References
 
+- Rewrote `src/lib/ai/client.ts` as raw-fetch adapter; exports `anthropic` (same name/interface) + `OPENROUTER_MODEL` constant so engine.ts and generate/route.ts need zero changes.
+- Used `beforeAll` with `vi.stubEnv` + `vi.resetModules` + dynamic `await import("@/lib/ai/client")` to work around module-level constant evaluation (TS1378 top-level await).
+- Removed `@anthropic-ai/sdk` from package.json; no other SDK added.
+
 ### Completion Notes List
 
-- Document final OpenRouter model ID used — 6.4 analytics and 5.3 logs reference it.
-- Document new env var name (`OPENROUTER_API_KEY`) — update .env.example and deployment docs.
+- OpenRouter model: `anthropic/claude-haiku-4-5-20251001` (default via `OPENROUTER_MODEL` env var).
+- New env var: `OPENROUTER_API_KEY`. Old `ANTHROPIC_API_KEY` kept in `.env.example` as deprecated comment.
+- `generate/route.ts` logs `OPENROUTER_MODEL` as `modelUsed` on both success and failure paths (AC4).
+- `engine.ts` untouched — only `src/lib/ai/client.ts` changed.
 
 ### File List
+
+- `src/lib/ai/client.ts` — complete rewrite; OpenRouter fetch adapter
+- `.env.example` — added OPENROUTER_API_KEY/OPENROUTER_MODEL, deprecated ANTHROPIC_API_KEY
+- `package.json` / `package-lock.json` — removed @anthropic-ai/sdk, added razorpay (Story 6.2)
+- `tests/ai/openrouter-client.test.ts` — 5 tests: URL/headers, message format, model override, response shape, error handling

@@ -25,7 +25,7 @@ export default async function UpgradePage() {
           <div className="flex items-baseline justify-between">
             <span className="text-lg font-semibold">Pro</span>
             <span className="text-2xl font-bold">
-              $9
+              ₹199
               <span className="text-sm font-normal text-gray-500">/mo</span>
             </span>
           </div>
@@ -45,12 +45,12 @@ export default async function UpgradePage() {
             </li>
           </ul>
 
-          {/* AC1: redirects to Stripe-hosted checkout — card data never touches nobsppt */}
+          {/* AC1: opens Razorpay modal — card data never touches nobsppt (NFR7) */}
           <CheckoutButton />
         </div>
 
         <p className="mt-4 text-center text-xs text-gray-400">
-          Payments processed by Stripe. Cancel anytime.
+          Payments processed by Razorpay. UPI, cards, netbanking accepted. Cancel anytime.
         </p>
 
         <div className="mt-6 text-center">

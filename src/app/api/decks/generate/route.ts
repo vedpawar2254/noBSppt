@@ -4,7 +4,8 @@ import { db } from "@/lib/db";
 import { decks, users, generationLogs, type NewGenerationLog } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth/session";
 import { generateDeck, CONSTRAINTS } from "@/lib/decks/engine";
-import { validateDeckInput, FREE_DECK_LIMIT, type GenerationPayload } from "@/lib/decks/validation";
+import { validateDeckInput, type GenerationPayload } from "@/lib/decks/validation";
+import { OPENROUTER_MODEL } from "@/lib/ai/client";
 
 /**
  * Fire-and-forget log write — never throws, never blocks the response.
@@ -45,24 +46,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: validation.error }, { status: 422 });
   }
 
-  // Paywall check — free users capped at FREE_DECK_LIMIT (Epic 4 will handle the UX)
-  const [user] = await db
-    .select({ deckCount: users.deckCount, subscriptionStatus: users.subscriptionStatus })
-    .from(users)
-    .where(eq(users.id, session.userId))
-    .limit(1);
-
-  if (!user) {
-    return NextResponse.json({ error: "User not found." }, { status: 404 });
-  }
-
-  const isFree = user.subscriptionStatus === "free";
-  if (isFree && user.deckCount >= FREE_DECK_LIMIT) {
-    return NextResponse.json(
-      { error: "Free deck limit reached. Upgrade to continue.", code: "PAYWALL" },
-      { status: 402 }
-    );
-  }
+  // DISABLED: Paywall check — uncomment to re-enable
+  // const [user] = await db
+  //   .select({ deckCount: users.deckCount, subscriptionStatus: users.subscriptionStatus })
+  //   .from(users)
+  //   .where(eq(users.id, session.userId))
+  //   .limit(1);
+  //
+  // if (!user) {
+  //   return NextResponse.json({ error: "User not found." }, { status: 404 });
+  // }
+  //
+  // const isFree = user.subscriptionStatus === "free";
+  // if (isFree && user.deckCount >= FREE_DECK_LIMIT) {
+  //   return NextResponse.json(
+  //     { error: "Free deck limit reached. Upgrade to continue.", code: "PAYWALL" },
+  //     { status: 402 }
+  //   );
+  // }
 
   // Call the restraint engine
   let result: Awaited<ReturnType<typeof generateDeck>>;
@@ -79,8 +80,8 @@ export async function POST(req: NextRequest) {
       inputMode: mode,
       status: "failure",
       errorMessage: message,
-      aiProvider: "anthropic",
-      modelUsed: CONSTRAINTS.MODEL,
+      aiProvider: "openrouter",
+      modelUsed: OPENROUTER_MODEL,
       latencyMs: null,
     });
     // NFR11: clear error, no silent failure. NFR12: client preserves input (handled client-side).
@@ -133,8 +134,8 @@ export async function POST(req: NextRequest) {
     inputMode: mode,
     status: "success",
     errorMessage: null,
-    aiProvider: "anthropic",
-    modelUsed: CONSTRAINTS.MODEL,
+    aiProvider: "openrouter",
+    modelUsed: OPENROUTER_MODEL,
     latencyMs: result.latencyMs,
   });
 

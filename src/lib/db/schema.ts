@@ -27,6 +27,8 @@ export const users = pgTable("users", {
   stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
   // Story 4.3: when cancel_at_period_end is set, store end date so UI can display "access until [date]"
   subscriptionCancelAt: timestamp("subscription_cancel_at"),
+  // Story 6.2 — Razorpay; kept alongside Stripe fields (Story 6.3 migrates cancellation flow)
+  razorpaySubscriptionId: varchar("razorpay_subscription_id", { length: 255 }),
   // Story 5.1 — role-based access; promote via: UPDATE users SET role='admin' WHERE email='you@example.com'
   role: userRoleEnum("role").default("user").notNull(),
 });
@@ -104,3 +106,37 @@ export const generationLogs = pgTable("generation_logs", {
 
 export type GenerationLog = typeof generationLogs.$inferSelect;
 export type NewGenerationLog = typeof generationLogs.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Deck views — Story 6.4
+// Records anonymous view events for the public shared deck viewer (/s/[token]).
+// visitor_id: random UUID stored in nobsppt_vid httpOnly cookie (30-day expiry).
+// Deduplication: same (deck_id, visitor_id) within 30 min = skipped.
+// Owner views are NOT recorded (checked in view route handler).
+// ---------------------------------------------------------------------------
+export const deckViews = pgTable("deck_views", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  deckId: uuid("deck_id")
+    .notNull()
+    .references(() => decks.id, { onDelete: "cascade" }),
+  visitorId: varchar("visitor_id", { length: 64 }).notNull(),
+  viewedAt: timestamp("viewed_at").defaultNow().notNull(),
+});
+
+export type DeckView = typeof deckViews.$inferSelect;
+export type NewDeckView = typeof deckViews.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Feedback — "will you pay" survey
+// One row per submission. userId nullable so unauthenticated users can submit too.
+// ---------------------------------------------------------------------------
+export const feedback = pgTable("feedback", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  answer: varchar("answer", { length: 10 }).notNull(), // "yes" | "maybe" | "no"
+  comment: text("comment"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Feedback = typeof feedback.$inferSelect;
+export type NewFeedback = typeof feedback.$inferInsert;

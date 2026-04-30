@@ -1,6 +1,6 @@
 # Story 6.2: Razorpay Subscription Checkout
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -86,14 +86,32 @@ so that I can pay in INR using Indian payment methods (UPI, cards, netbanking) w
 
 ### Agent Model Used
 
-_to be filled_
+claude-sonnet-4-6
 
 ### Debug Log References
 
+- Razorpay modal flow: server creates subscription → returns `{subscriptionId, keyId}` → client opens modal → handler POSTs `{razorpay_payment_id, razorpay_subscription_id, razorpay_signature}` to `/api/subscription/verify`.
+- HMAC-SHA256 signature: `createHmac("sha256", KEY_SECRET).update(`${paymentId}|${subscriptionId}`).digest("hex")`.
+- Webhook signature: `createHmac("sha256", WEBHOOK_SECRET).update(rawBody).digest("hex")`.
+- Used `timingSafeEqual` for constant-time comparison in both verify and webhook handlers.
+
 ### Completion Notes List
 
-- Document `razorpaySubscriptionId` field added to schema — Story 6.3 uses it for cancellation.
-- Document webhook endpoint path — Story 5.3 admin logs may reference it.
-- Document whether Stripe SDK was removed or kept — Story 6.3 needs to know.
+- `razorpaySubscriptionId` added as `VARCHAR(255)` nullable on `users` table — Story 6.3 reads this for cancellation via `razorpay.subscriptions.cancel(razorpaySubscriptionId)`.
+- Webhook endpoint: `POST /api/webhooks/razorpay` — exclude from CSRF middleware (same pattern as `/api/webhooks/stripe`).
+- Stripe SDK kept — Story 4.3 cancellation routes still reference it. Story 6.3 will remove.
+- Stripe fields (`stripeCustomerId`, `stripeSubscriptionId`, `subscriptionCancelAt`) kept in schema for backwards compat.
 
 ### File List
+
+- `src/lib/razorpay/client.ts` — Razorpay singleton (global pattern, same as db client)
+- `src/lib/db/schema.ts` — added `razorpaySubscriptionId` field to users table
+- `src/app/api/subscription/checkout/route.ts` — replaced Stripe with Razorpay subscription creation
+- `src/app/api/subscription/verify/route.ts` — new; HMAC-SHA256 signature verification + user upgrade
+- `src/app/api/webhooks/razorpay/route.ts` — new; handles activated/charged/cancelled/completed/payment.failed
+- `src/app/upgrade/CheckoutButton.tsx` — replaced Stripe redirect with Razorpay modal flow
+- `src/app/upgrade/page.tsx` — updated pricing to ₹199/mo, Razorpay branding
+- `.env.example` — added RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_PLAN_ID, RAZORPAY_WEBHOOK_SECRET
+- `tests/subscription/checkout-razorpay.test.ts` — 6 tests: auth, plan_id, SDK call, response shape, error
+- `tests/subscription/verify.test.ts` — 5 tests: auth, missing fields, invalid sig, valid HMAC, tampered id
+- `tests/webhooks/razorpay.test.ts` — 7 tests: invalid sig, activated, charged, cancelled, completed, payment.failed, unknown

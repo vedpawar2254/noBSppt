@@ -3,12 +3,17 @@ import { eq } from "drizzle-orm";
 import { getSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
-import { stripe } from "@/lib/stripe/client";
+import { razorpay } from "@/lib/razorpay/client";
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-
+/**
+ * POST /api/subscription/checkout
+ *
+ * Creates a Razorpay Subscription and returns { subscriptionId, keyId }.
+ * The client opens the Razorpay modal with these — no redirect to hosted page (AC1).
+ * Card data never touches nobsppt servers (AC1, NFR7).
+ */
 export async function POST(req: NextRequest) {
-  void req; // no body needed
+  void req;
 
   const session = await getSession();
   if (!session) {
@@ -16,11 +21,7 @@ export async function POST(req: NextRequest) {
   }
 
   const [user] = await db
-    .select({
-      email: users.email,
-      subscriptionStatus: users.subscriptionStatus,
-      stripeCustomerId: users.stripeCustomerId,
-    })
+    .select({ subscriptionStatus: users.subscriptionStatus })
     .from(users)
     .where(eq(users.id, session.userId))
     .limit(1);
@@ -29,37 +30,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "User not found." }, { status: 404 });
   }
 
-  // AC3: already paid — don't create a redundant session
   if (user.subscriptionStatus === "paid") {
     return NextResponse.json({ error: "Already subscribed." }, { status: 409 });
   }
 
-  const priceId = process.env.STRIPE_PRICE_ID;
-  if (!priceId) {
-    console.error("[checkout] STRIPE_PRICE_ID env variable not set");
+  const planId = process.env.RAZORPAY_PLAN_ID;
+  if (!planId) {
+    console.error("[checkout] RAZORPAY_PLAN_ID env variable not set");
     return NextResponse.json({ error: "Checkout not configured." }, { status: 503 });
   }
 
   try {
-    const checkoutSession = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      line_items: [{ price: priceId, quantity: 1 }],
-      // Reuse existing Stripe customer if present; otherwise pre-fill email
-      ...(user.stripeCustomerId
-        ? { customer: user.stripeCustomerId }
-        : { customer_email: user.email }),
-      // client_reference_id lets the webhook correlate back to our userId (AC2)
-      client_reference_id: session.userId,
-      // AC2: success → /create with flag for success banner
-      // AC3: cancel → /create (input still in page state if not refreshed)
-      success_url: `${APP_URL}/create?upgraded=true`,
-      cancel_url: `${APP_URL}/create`,
+    const subscription = await razorpay.subscriptions.create({
+      plan_id: planId,
+      total_count: 12, // 12 billing cycles
+      quantity: 1,
+      notes: { userId: session.userId },
     });
 
-    return NextResponse.json({ url: checkoutSession.url }, { status: 200 });
+    return NextResponse.json(
+      {
+        subscriptionId: subscription.id,
+        keyId: process.env.RAZORPAY_KEY_ID,
+      },
+      { status: 200 }
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("[checkout] Stripe error:", message);
+    console.error("[checkout] Razorpay error:", message);
     return NextResponse.json({ error: "Failed to create checkout session." }, { status: 502 });
   }
 }
