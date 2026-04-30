@@ -2,3 +2,26 @@
 # Dolt database files (added by bd init)
 .dolt/
 *.db
+
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# Environment (never commit secrets)
+.env.local
+.env.*.local
+
+# Drizzle migrations (committed intentionally, but exclude lock)
+drizzle/migrations/meta/_journal.json
+
+# Build outputs
+dist/
+
+# TypeScript
+tsconfig.tsbuildinfo
+
+# OS
+.DS_Store

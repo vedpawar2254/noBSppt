@@ -1,0 +1,74 @@
+# Story 3.3: Mobile-Responsive Shared Deck Viewer
+
+Status: ready-for-dev
+
+## Story
+
+As a recipient opening a shared deck on a mobile device,
+I want the deck to be fully viewable on my phone,
+so that I can review it without needing a desktop.
+
+## Acceptance Criteria
+
+1. Given a shared deck link is opened on a mobile browser (375px viewport), when the page loads, then slides render correctly, text is legible, and no content is clipped or overflowing (FR17).
+2. Given the shared deck viewer loads, when measured via performance tooling, then first contentful paint occurs in under 2 seconds on a standard mobile connection (NFR2).
+3. Given I am on mobile and viewing a shared deck, when I swipe or tap to navigate between slides, then navigation works correctly without requiring zoom or horizontal scroll.
+
+## Tasks / Subtasks
+
+- [ ] Make public deck viewer fully responsive at 375px (AC: 1)
+  - [ ] Slide title: readable font size, no overflow
+  - [ ] Bullet text: legible at small screen, no clipping
+  - [ ] Slide container: full-width, correct aspect ratio on mobile
+  - [ ] Navigation controls: touch-friendly tap targets (min 44x44px)
+- [ ] Touch/swipe navigation (AC: 3)
+  - [ ] Swipe left → next slide
+  - [ ] Swipe right → previous slide
+  - [ ] Tap navigation arrows work on touch devices
+  - [ ] No horizontal scroll on any slide
+- [ ] Performance: FCP <2s on mobile (AC: 2)
+  - [ ] Minimize JS bundle for public viewer route (code-split if needed)
+  - [ ] No render-blocking resources
+  - [ ] Slides data loaded efficiently (already SSR'd from Story 3.1)
+  - [ ] Images/thumbnails lazy-loaded if any
+- [ ] Cross-browser mobile testing (AC: 1, 3)
+  - [ ] Safari iOS (latest)
+  - [ ] Chrome Android (latest)
+- [ ] Breakpoints: Desktop (1024px+), Tablet (768px), Mobile (375px) — per PRD spec
+- [ ] Write tests: 375px render, swipe navigation, no overflow, FCP target (AC: 1–3)
+
+## Dev Notes
+
+- **CRITICAL:** Read Stories 2.3 and 3.1 Dev Agent Records — this story modifies the viewer component and public route they established.
+- **NFR2:** FCP <2s. The public viewer is SSR'd from Story 3.1 — HTML is pre-rendered. Focus on CSS efficiency and JS bundle size. Do NOT load heavy client-side libraries on this route.
+- **Swipe detection:** Use touch events (`touchstart`, `touchend`) or a lightweight gesture library. Avoid heavy drag libraries — keep bundle minimal.
+- **No horizontal scroll:** This is a hard requirement. Test on real 375px viewport. Common failure: slide title too long, wraps incorrectly.
+- **Creator interface (desktop-first):** PRD states creator UI is desktop-first. This story is ONLY about the public shared viewer. Do not apply mobile-first to the `/create` or `/dashboard` routes — those are desktop.
+- **Breakpoints:** Desktop (1024px+), Tablet (768px), Mobile (375px) — these are from PRD and apply to the public viewer.
+- This story runs in **PARALLEL with Stories 3.2 and 4.3** — no shared files with those stories.
+
+### Project Structure Notes
+
+- Modify the viewer component established in Story 2.3 and used in Story 3.1.
+- Add responsive CSS — prefer CSS media queries over JS-based responsive logic.
+
+### References
+
+- [Source: _bmad-output/planning-artifacts/prd.md#Functional Requirements] FR17
+- [Source: _bmad-output/planning-artifacts/prd.md#Non-Functional Requirements] NFR2
+- [Source: _bmad-output/planning-artifacts/prd.md#Web Application Specific Requirements] Responsive design breakpoints
+- [Source: _bmad-output/planning-artifacts/epics.md#Epic 3] Story 3.3
+- [Source: _bmad-output/implementation-artifacts/2-3-in-browser-deck-viewer.md] Viewer component
+- [Source: _bmad-output/implementation-artifacts/3-1-public-shareable-link-generation.md] Public route
+
+## Dev Agent Record
+
+### Agent Model Used
+
+_to be filled_
+
+### Debug Log References
+
+### Completion Notes List
+
+### File List

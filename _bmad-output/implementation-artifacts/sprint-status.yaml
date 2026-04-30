@@ -1,0 +1,73 @@
+# generated: 2026-04-30
+# last_updated: 2026-04-30
+# project: nobsppt
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - ready-for-dev: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - ready-for-dev → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - ready-for-dev: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-04-30
+last_updated: 2026-04-30
+project: nobsppt
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  epic-1: backlog
+  1-1-user-registration: ready-for-dev
+  1-2-user-login-and-logout: ready-for-dev
+  1-3-deck-history-and-account-management: ready-for-dev
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-text-and-outline-input-interface: ready-for-dev
+  2-2-ai-restraint-engine-deck-generation: ready-for-dev
+  2-3-in-browser-deck-viewer: ready-for-dev
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-public-shareable-link-generation: ready-for-dev
+  3-2-pdf-export-creator-and-recipient: ready-for-dev
+  3-3-mobile-responsive-shared-deck-viewer: ready-for-dev
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-free-deck-limit-enforcement-and-paywall: ready-for-dev
+  4-2-subscription-checkout: ready-for-dev
+  4-3-subscription-management: ready-for-dev
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-platform-metrics-dashboard: ready-for-dev
+  5-2-user-account-and-activity-inspection: ready-for-dev
+  5-3-generation-log-access-and-error-diagnosis: ready-for-dev
+  epic-5-retrospective: optional
