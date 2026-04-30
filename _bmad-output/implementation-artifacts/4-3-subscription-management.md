@@ -1,6 +1,6 @@
 # Story 4.3: Subscription Management
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -60,10 +60,37 @@ so that I have full control over my billing.
 
 ### Agent Model Used
 
-_to be filled_
+claude-opus-4-6
 
 ### Debug Log References
 
+None — all 28 subscription tests pass (11 new + 8 checkout + 9 webhook).
+
 ### Completion Notes List
 
+- **`subscription_cancel_at` field** added to users table — stores period end date so UI shows "access until [date]" without extra Stripe call.
+- **Cancel endpoint** uses `subscriptions.update({ cancel_at_period_end: true })` — NOT `subscriptions.cancel()`. User keeps paid access until period ends.
+- **Status endpoint** fetches live from Stripe API via `stripe_subscription_id`. Falls back to local DB if Stripe unreachable.
+- **Webhook extended**: `customer.subscription.deleted` now also clears `stripe_subscription_id` and `subscription_cancel_at` on downgrade.
+- **`/account` added to PROTECTED_PATHS** in middleware.
+
 ### File List
+
+**New files:**
+
+```
+src/app/api/subscription/cancel/route.ts
+src/app/api/subscription/status/route.ts
+src/app/account/billing/page.tsx
+src/app/account/billing/BillingPanel.tsx
+tests/subscription/cancel.test.ts
+tests/subscription/billing-status.test.ts
+```
+
+**Modified files:**
+
+```
+src/lib/db/schema.ts                    (added subscriptionCancelAt field)
+src/middleware.ts                       (added /account to PROTECTED_PATHS)
+src/app/api/webhooks/stripe/route.ts    (extended customer.subscription.deleted to clear cancel fields)
+```
