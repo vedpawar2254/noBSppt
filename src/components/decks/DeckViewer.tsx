@@ -11,7 +11,10 @@
  * Props interface is intentionally stable — do not break it in downstream stories.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+
+// Minimum horizontal swipe distance to trigger slide change (px)
+const SWIPE_THRESHOLD = 50;
 import type { SlideObject } from "@/lib/db/schema";
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -30,10 +33,12 @@ export const THEME_STYLES: Record<
 > = {
   default: {
     slide: "bg-white",
-    title: "text-3xl sm:text-4xl font-bold text-gray-900 leading-tight",
-    bullet: "text-lg sm:text-xl text-gray-700 leading-relaxed",
-    bulletDot: "text-gray-300 mr-3 select-none",
-    nav: "text-gray-400 hover:text-gray-900 disabled:opacity-20 disabled:cursor-not-allowed transition-colors p-2",
+    // AC1 (Story 3.3): 2xl on 375px prevents long titles from overflowing
+    title: "text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 leading-tight break-words",
+    bullet: "text-base sm:text-lg md:text-xl text-gray-700 leading-relaxed",
+    bulletDot: "text-gray-300 mr-3 select-none shrink-0",
+    // AC3 (Story 3.3): min 44×44px tap targets for touch devices
+    nav: "text-gray-400 hover:text-gray-900 disabled:opacity-20 disabled:cursor-not-allowed transition-colors p-2 min-w-[44px] min-h-[44px] flex items-center justify-center",
     counter: "text-sm text-gray-400 tabular-nums",
   },
 };
@@ -66,6 +71,7 @@ export default function DeckViewer({
   headerActions,
 }: DeckViewerProps) {
   const [current, setCurrent] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const styles = THEME_STYLES[theme] ?? THEME_STYLES.default;
   const total = slides.length;
@@ -89,6 +95,31 @@ export default function DeckViewer({
     return () => window.removeEventListener("keydown", onKey);
   }, [goNext, goPrev]);
 
+  // AC3 (Story 3.3): touch swipe navigation — swipe left = next, swipe right = prev
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    let startX = 0;
+
+    function onTouchStart(e: TouchEvent) {
+      startX = e.touches[0].clientX;
+    }
+
+    function onTouchEnd(e: TouchEvent) {
+      const diff = startX - e.changedTouches[0].clientX;
+      if (diff > SWIPE_THRESHOLD) goNext();
+      else if (diff < -SWIPE_THRESHOLD) goPrev();
+    }
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [goNext, goPrev]);
+
   if (!slide) {
     return (
       <div className="flex items-center justify-center h-64 text-gray-400 text-sm">
@@ -98,7 +129,8 @@ export default function DeckViewer({
   }
 
   return (
-    <div className="flex flex-col h-full min-h-0" aria-label="Deck viewer">
+    // AC1 (Story 3.3): overflow-x-hidden prevents horizontal scroll on any slide
+    <div ref={containerRef} className="flex flex-col h-full min-h-0 overflow-x-hidden" aria-label="Deck viewer">
       {/* Header — title + injected actions */}
       <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-100 shrink-0">
         <h1 className="text-base font-semibold text-gray-900 truncate max-w-xs sm:max-w-md">
@@ -110,8 +142,9 @@ export default function DeckViewer({
       </div>
 
       {/* Slide area — fills remaining vertical space */}
+      {/* AC3 (Story 3.3): touch-pan-y lets browser handle vertical scroll; we handle horizontal swipe */}
       <div
-        className={`flex-1 flex flex-col justify-center px-8 sm:px-16 py-10 sm:py-16 ${styles.slide}`}
+        className={`flex-1 flex flex-col justify-center px-6 sm:px-16 py-8 sm:py-16 touch-pan-y ${styles.slide}`}
         role="region"
         aria-label={`Slide ${current + 1} of ${total}`}
         aria-live="polite"

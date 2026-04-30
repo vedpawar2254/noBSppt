@@ -1,6 +1,6 @@
 # Story 3.3: Mobile-Responsive Shared Deck Viewer
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -65,10 +65,57 @@ so that I can review it without needing a desktop.
 
 ### Agent Model Used
 
-_to be filled_
+claude-sonnet-4-6
 
 ### Debug Log References
 
+None — 71/71 deck tests passed. Pre-existing bcrypt timeout failures in login/register tests are unrelated (noted in Story 2.3 record).
+
 ### Completion Notes List
 
+**Changes made to `DeckViewer` (shared component — affects both `/deck/[id]` and `/s/[token]`):**
+
+All changes are additive and backwards-compatible with Story 2.3's props contract.
+
+| Change | Before | After | Reason |
+|--------|--------|-------|--------|
+| Slide title font | `text-3xl sm:text-4xl` | `text-2xl sm:text-3xl md:text-4xl` | Prevents overflow on 375px with long titles (AC1) |
+| Slide title overflow | (none) | `break-words` | Long single-word titles wrap on mobile (AC1) |
+| Bullet font | `text-lg sm:text-xl` | `text-base sm:text-lg md:text-xl` | Legible at 375px (AC1) |
+| Bullet dot | (none) | `shrink-0` | Prevents dot from shrinking on narrow viewports (AC1) |
+| Nav buttons | `p-2` | `p-2 min-w-[44px] min-h-[44px] flex items-center justify-center` | 44×44px touch targets (AC3) |
+| Root container | (no overflow) | `overflow-x-hidden` | Prevents any horizontal scroll (AC1) |
+| Slide area | `px-8 sm:px-16` | `px-6 sm:px-16 touch-pan-y` | Tighter mobile padding; `touch-pan-y` delegates horizontal swipe to our handler (AC3) |
+| **Swipe navigation** | (none) | `touchstart`/`touchend` listeners on container with `SWIPE_THRESHOLD = 50px` | AC3 |
+
+**Swipe implementation:**
+- Touch listeners attached to `containerRef` (component root div) via `useEffect`
+- `{ passive: true }` listeners — does not block scroll
+- Threshold: 50px horizontal diff to trigger slide change
+- Swipe left → `goNext()`, swipe right → `goPrev()` (both clamped by existing boundary logic)
+
+**Performance / NFR2 (FCP <2s):**
+- No new JS dependencies added — zero bundle impact
+- Public viewer route `/s/[token]` is SSR (Story 3.1 set `dynamic = "force-dynamic"`) — HTML pre-rendered
+- Touch event handlers are lazy (client-side only, deferred until mount)
+- Tailwind CSS purged at build — no extra stylesheet weight
+
+**Breakpoints applied:**
+- Mobile 375px: `text-2xl`, `text-base`, `px-6`, `min-w-[44px]`
+- Tablet 768px (`sm:`): `text-3xl`, `text-lg`, `px-16`
+- Desktop 1024px+ (`md:`): `text-4xl`, `text-xl`
+
 ### File List
+
+**Files modified:**
+
+```
+src/components/decks/DeckViewer.tsx   — swipe nav, touch targets, mobile typography, overflow fix
+_bmad-output/implementation-artifacts/3-3-mobile-responsive-shared-deck-viewer.md
+```
+
+**New files created:**
+
+```
+tests/decks/viewer-mobile.test.tsx    — 8 tests: swipe left/right, threshold, bounds, overflow, touch targets
+```
