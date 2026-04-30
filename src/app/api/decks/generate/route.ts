@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { decks, users } from "@/lib/db/schema";
+import { decks, users, generationLogs, type NewGenerationLog } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth/session";
 import { generateDeck, CONSTRAINTS } from "@/lib/decks/engine";
 import { validateDeckInput, FREE_DECK_LIMIT, type GenerationPayload } from "@/lib/decks/validation";
+
+/**
+ * Fire-and-forget log write — never throws, never blocks the response.
+ * Wrapping in async ensures synchronous throws from db.insert become caught rejections.
+ */
+async function writeGenerationLog(entry: NewGenerationLog): Promise<void> {
+  try {
+    await db.insert(generationLogs).values(entry);
+  } catch (err) {
+    console.error("[generate] Log write failed:", err instanceof Error ? err.message : err);
+  }
+}
 
 export const maxDuration = 60; // seconds — Next.js route timeout (allows for AI latency)
 
@@ -59,6 +71,18 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[generate] AI error:", message);
+    // Story 5.3: log failure — fire-and-forget, never blocks the error response
+    void writeGenerationLog({
+      userId: session.userId,
+      deckId: null,
+      inputText: content!.slice(0, 500),
+      inputMode: mode,
+      status: "failure",
+      errorMessage: message,
+      aiProvider: "anthropic",
+      modelUsed: CONSTRAINTS.MODEL,
+      latencyMs: null,
+    });
     // NFR11: clear error, no silent failure. NFR12: client preserves input (handled client-side).
     return NextResponse.json(
       { error: "Deck generation failed. Please try again.", detail: message },
@@ -100,6 +124,19 @@ export async function POST(req: NextRequest) {
     console.error("[generate] DB error:", message);
     return NextResponse.json({ error: "Failed to save deck. Please try again." }, { status: 500 });
   }
+
+  // Story 5.3: log success — fire-and-forget after deck is saved
+  void writeGenerationLog({
+    userId: session.userId,
+    deckId: deckId!,
+    inputText: content!.slice(0, 500),
+    inputMode: mode,
+    status: "success",
+    errorMessage: null,
+    aiProvider: "anthropic",
+    modelUsed: CONSTRAINTS.MODEL,
+    latencyMs: result.latencyMs,
+  });
 
   return NextResponse.json(
     {

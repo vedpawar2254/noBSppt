@@ -1,6 +1,6 @@
 # Story 5.3: Generation Log Access & Error Diagnosis
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -64,10 +64,69 @@ so that I can diagnose errors and review output quality.
 
 ### Agent Model Used
 
-_to be filled_
+claude-sonnet-4-6
 
 ### Debug Log References
 
+- `tests/admin/logs.test.ts` TS2322/TS2352: `FAILURE_LOG` had `deckId: null` / `latencyMs: null` conflicting with `SAMPLE_LOG`'s inferred non-null types. Fixed by introducing explicit `TestLog` type with nullable fields.
+
+176/176 tests passed, 0 TS errors in my files.
+
 ### Completion Notes List
 
+**`generation_logs` schema (future analytics agents reference this):**
+
+```
+generation_logs
+────────────────────────────────────────────────────────────
+id               UUID PRIMARY KEY DEFAULT random_uuid()
+user_id          UUID REFERENCES users(id) ON DELETE SET NULL — nullable
+deck_id          UUID REFERENCES decks(id) ON DELETE SET NULL — null on failure
+input_text       VARCHAR(500)   — first 500 chars of user input
+input_mode       VARCHAR(10)    — "text" | "outline"
+status           ENUM('success','failure') NOT NULL
+error_message    TEXT           — null on success; error type + message on failure
+ai_provider      VARCHAR(50)    NOT NULL DEFAULT 'anthropic'
+model_used       VARCHAR(100)   — e.g. "claude-haiku-4-5-20251001"
+latency_ms       INTEGER        — null when failure before AI call; NFR1 monitoring
+created_at       TIMESTAMP      NOT NULL DEFAULT NOW()
+```
+
+**Log write (generation endpoint `src/app/api/decks/generate/route.ts`):**
+- `writeGenerationLog()` — async helper, fire-and-forget (`void`), never blocks or throws to caller
+- Logs on **AI failure** (before 502 return): `status=failure`, `errorMessage=err.message`, `deckId=null`
+- Logs on **success** (after transaction commits): `status=success`, `deckId=deckId!`, `latencyMs=result.latencyMs`
+- Input truncated to 500 chars at write time
+
+**Admin routes (no shared files with Story 5.2):**
+
+| Route | File | Purpose |
+|-------|------|---------|
+| `GET /api/admin/logs` | `src/app/api/admin/logs/route.ts` | Paginated list; filters: status, start, end, email |
+| `GET /api/admin/logs/:id` | `src/app/api/admin/logs/[id]/route.ts` | Full log detail |
+| `/admin/logs` | `src/app/admin/logs/page.tsx` | List UI with filter form, pagination |
+| `/admin/logs/:id` | `src/app/admin/logs/[id]/page.tsx` | Detail UI — links to /deck/:id and /admin/users/:id |
+
+**Auth:** All routes use `getAdminSession()` / `requireAdmin()` from Story 5.1's `src/lib/auth/admin-guard.ts`.
+
+**PDF export errors (Story 3.2 note):** Used the same `generation_logs` table is for generation events only. If Story 3.2 wants to log PDF export failures, recommend a separate `export_logs` table to avoid polluting the generation signal.
+
 ### File List
+
+**New files created:**
+
+```
+src/app/api/admin/logs/route.ts
+src/app/api/admin/logs/[id]/route.ts
+src/app/admin/logs/page.tsx
+src/app/admin/logs/[id]/page.tsx
+tests/admin/logs.test.ts         — 16 tests
+```
+
+**Files modified:**
+
+```
+src/lib/db/schema.ts                        — generationLogStatusEnum + generationLogs table
+src/app/api/decks/generate/route.ts         — writeGenerationLog helper + log calls (success + failure)
+_bmad-output/implementation-artifacts/5-3-generation-log-access-and-error-diagnosis.md
+```

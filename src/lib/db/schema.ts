@@ -75,3 +75,32 @@ export const decks = pgTable("decks", {
 
 export type Deck = typeof decks.$inferSelect;
 export type NewDeck = typeof decks.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Generation logs — Story 5.3
+// Every deck generation attempt (success or failure) writes one row here.
+// Admin reads via GET /api/admin/logs. Story 5.3 owns this table.
+// ---------------------------------------------------------------------------
+export const generationLogStatusEnum = pgEnum("generation_log_status", ["success", "failure"]);
+
+export const generationLogs = pgTable("generation_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  // Nullable on cascade-delete — log is kept even if user/deck is deleted
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  deckId: uuid("deck_id").references(() => decks.id, { onDelete: "set null" }), // null on failure
+  // Input — first 500 chars only (diagnosis without excessive storage)
+  inputText: varchar("input_text", { length: 500 }),
+  inputMode: varchar("input_mode", { length: 10 }),  // "text" | "outline"
+  // Outcome
+  status: generationLogStatusEnum("status").notNull(),
+  errorMessage: text("error_message"),               // null on success
+  // AI provenance — for model comparison and cost tracking
+  aiProvider: varchar("ai_provider", { length: 50 }).notNull().default("anthropic"),
+  modelUsed: varchar("model_used", { length: 100 }), // e.g. "claude-haiku-4-5-20251001"
+  // NFR1 performance monitoring — primary signal for latency tracking
+  latencyMs: integer("latency_ms"),                  // null when failure occurs before AI call
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type GenerationLog = typeof generationLogs.$inferSelect;
+export type NewGenerationLog = typeof generationLogs.$inferInsert;
