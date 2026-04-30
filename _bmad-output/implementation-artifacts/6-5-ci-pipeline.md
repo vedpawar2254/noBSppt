@@ -1,6 +1,6 @@
 # Story 6.5: CI Pipeline
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -115,13 +115,45 @@ jobs:
 
 ### Agent Model Used
 
-_to be filled_
+claude-sonnet-4-6
 
 ### Debug Log References
 
+- bcrypt login test timeouts (pre-existing Story 2.3 issue): resolved by `BCRYPT_ROUNDS=4` in `tests/setup.ts` and CI workflow env.
+- `checkout.test.ts` module load failure: resolved by adding `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_PLAN_ID` dummy values in `tests/setup.ts`. 4 Stripe checkout tests remain failing (pre-existing: parallel agent Story 6.2 rewrote the checkout route to use Razorpay but didn't update the Stripe-focused tests).
+
 ### Completion Notes List
 
-- Document which secrets need to be set in GitHub Actions (Settings → Secrets).
-- Note if any tests required real external services.
+**GitHub Actions Secrets** (Settings → Secrets → Actions):
+
+For `build` job (main-only):
+- `CI_DATABASE_URL` — PostgreSQL connection string for build-time env
+- `CI_JWT_SECRET` — JWT signing secret
+- `OPENROUTER_API_KEY` — AI provider key
+- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` — Stripe secrets
+- `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `NEXT_PUBLIC_RAZORPAY_KEY_ID` — Razorpay keys
+- `NEXT_PUBLIC_APP_URL` — app base URL
+
+For `check` job (all branches): no secrets needed — `tests/setup.ts` provides `JWT_SECRET` and `DATABASE_URL`; all external services are mocked.
+
+**No real external services in tests:** DB, AI (openrouter), Stripe, and Razorpay are all mocked via `vi.mock()` in every test file.
+
+**Pre-existing failures at commit time (not caused by this story):**
+- `tests/decks/generate.test.ts`: 1 test (paywall 402) — `db.insert` not mocked (Story 5.3 added log writes, Story 2.2 test not updated)
+- `tests/decks/paywall.test.ts`: 2 tests — same `db.insert` mock gap
+- `tests/subscription/checkout.test.ts`: 4 Stripe tests — parallel agent Story 6.2 rewrote checkout route for Razorpay without updating original Stripe tests
 
 ### File List
+
+**New files:**
+```
+.github/workflows/ci.yml
+```
+
+**Modified files:**
+```
+README.md                              — CI badge after tagline
+src/lib/auth/password.ts               — BCRYPT_ROUNDS env var (default 12)
+tests/setup.ts                         — BCRYPT_ROUNDS=4 + Razorpay dummy env vars
+_bmad-output/implementation-artifacts/6-5-ci-pipeline.md
+```

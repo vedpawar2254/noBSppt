@@ -1,6 +1,6 @@
 # Story 6.4: Deck View & Visitor Analytics
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -64,13 +64,49 @@ so that I can understand whether my decks are reaching their audience.
 
 ### Agent Model Used
 
-_to be filled_
+claude-sonnet-4-6
 
 ### Debug Log References
 
+None — all tests passed on first run after fixing thenable mock pattern.
+
 ### Completion Notes List
 
-- Document deck_views table schema — future analytics stories extend it.
-- Document visitor_id cookie name and strategy.
+**`deck_views` table** (added to schema by parallel agent 6.1-6.2; used here):
+```
+deck_views
+────────────────────────────────────────────────────────
+id           UUID PRIMARY KEY DEFAULT random_uuid()
+deck_id      UUID REFERENCES decks(id) ON DELETE CASCADE
+visitor_id   VARCHAR(64) NOT NULL — random UUID from nobsppt_vid cookie
+viewed_at    TIMESTAMP DEFAULT NOW()
+```
+
+**visitor_id cookie:** `nobsppt_vid`, httpOnly, 30-day expiry, set via Route Handler (not RSC — RSC can't set cookies). Client component `DeckViewTracker` fires POST on mount.
+
+**Dedup window:** 30 minutes — same `(deck_id, visitor_id)` pair within 30 min skips insert.
+
+**Owner check:** `getSessionFromRequest(req)` in view handler; if `session.userId === deck.userId`, skip insert (return early after setting cookie).
+
+**Admin metrics extension:** `GET /api/admin/metrics` now returns `totalViews` (total across all decks) and `topDecks` (top 5 by view count, joined with decks.title).
+
+**Test mock pattern:** Query chains need to be thenable (add `then/catch/finally` from a `Promise.resolve(result)`) so they resolve when `Promise.all` awaits them without a final `.limit()` call.
 
 ### File List
+
+**New files:**
+```
+src/app/api/decks/[id]/view/route.ts   — POST view recording
+src/app/api/decks/[id]/stats/route.ts  — GET owner stats
+src/components/decks/DeckViewTracker.tsx — client beacon component
+tests/decks/analytics.test.ts          — 11 tests
+```
+
+**Modified files:**
+```
+src/app/s/[token]/page.tsx             — add DeckViewTracker
+src/app/deck/[id]/page.tsx             — add stats panel to header
+src/app/api/admin/metrics/route.ts     — extend with totalViews + topDecks
+tests/admin/metrics.test.ts            — extend mock to 6 queries
+_bmad-output/implementation-artifacts/6-4-deck-view-and-visitor-analytics.md
+```
