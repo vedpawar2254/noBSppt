@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { decks } from "@/lib/db/schema";
 import DeckViewer from "@/components/decks/DeckViewer";
 import ExportButton from "@/components/decks/ExportButton";
+import DeckViewTracker from "@/components/decks/DeckViewTracker";
 
 interface PageProps {
   params: { token: string };
@@ -71,6 +72,8 @@ export default async function PublicDeckPage({ params }: PageProps) {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
+      {/* Story 6.4: fire-and-forget view event; sets nobsppt_vid cookie */}
+      <DeckViewTracker deckId={deck.id} />
       <DeckViewer
         slides={deck.slides}
         deckTitle={deck.title}

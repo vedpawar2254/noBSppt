@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/guard";
 import { db } from "@/lib/db";
-import { decks } from "@/lib/db/schema";
+import { decks, deckViews } from "@/lib/db/schema";
 import DeckViewer from "@/components/decks/DeckViewer";
 import ShareButton from "@/components/decks/ShareButton";
 import ExportButton from "@/components/decks/ExportButton";
@@ -47,6 +47,17 @@ export default async function DeckPage({ params }: PageProps) {
     notFound();
   }
 
+  // Story 6.4: fetch view stats for this deck (owner-only, non-blocking)
+  const [[viewStats]] = await Promise.all([
+    db
+      .select({
+        totalViews: sql<number>`count(*)::int`,
+        uniqueVisitors: sql<number>`count(distinct ${deckViews.visitorId})::int`,
+      })
+      .from(deckViews)
+      .where(eq(deckViews.deckId, id)),
+  ]);
+
   // Header actions injected into the viewer — creator-specific
   const headerActions = (
     <>
@@ -56,6 +67,11 @@ export default async function DeckPage({ params }: PageProps) {
       >
         ← Dashboard
       </Link>
+      {viewStats.totalViews > 0 && (
+        <span className="text-xs text-gray-400 tabular-nums">
+          {viewStats.totalViews} views · {viewStats.uniqueVisitors} unique
+        </span>
+      )}
       <ShareButton deckId={id} initialShareToken={deck.shareToken} />
       <ExportButton deckId={id} />
     </>

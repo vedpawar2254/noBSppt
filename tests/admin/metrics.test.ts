@@ -28,6 +28,8 @@ function mockMetrics({
   totalUsers = 18,
   totalPaid = 3,
   conversions = 3,
+  totalViews = 0,
+  topDecks = [] as { deckId: string; title: string; views: number }[],
 } = {}) {
   mockDb.select = vi.fn()
     .mockReturnValueOnce({
@@ -44,6 +46,22 @@ function mockMetrics({
     .mockReturnValueOnce({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockResolvedValue([{ conversions }]),
+      }),
+    })
+    // Story 6.4: totalViews
+    .mockReturnValueOnce({
+      from: vi.fn().mockResolvedValue([{ totalViews }]),
+    })
+    // Story 6.4: topDecks (groupBy → orderBy → limit chain)
+    .mockReturnValueOnce({
+      from: vi.fn().mockReturnValue({
+        leftJoin: vi.fn().mockReturnValue({
+          groupBy: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockReturnValue({
+              limit: vi.fn().mockResolvedValue(topDecks),
+            }),
+          }),
+        }),
       }),
     });
 }

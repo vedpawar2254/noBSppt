@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { and, eq, gte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { users, decks } from "@/lib/db/schema";
+import { users, decks, deckViews } from "@/lib/db/schema";
 import { getAdminSession } from "@/lib/auth/admin-guard";
 
 // GET /api/admin/metrics — platform-wide metrics, admin-only (AC1, AC2, FR28, FR29)
@@ -18,6 +18,8 @@ export async function GET() {
     [{ totalUsers }],
     [{ totalPaid }],
     [{ conversions }],
+    [{ totalViews }],
+    topDecks,
   ] = await Promise.all([
     // FR28: total decks generated across all users
     db.select({ totalDecks: sql<number>`count(*)::int` }).from(decks),
@@ -36,10 +38,26 @@ export async function GET() {
       .select({ conversions: sql<number>`count(*)::int` })
       .from(users)
       .where(and(eq(users.subscriptionStatus, "paid"), gte(users.deckCount, 1))),
+
+    // Story 6.4: total deck views platform-wide
+    db.select({ totalViews: sql<number>`count(*)::int` }).from(deckViews),
+
+    // Story 6.4: top 5 most-viewed decks
+    db
+      .select({
+        deckId: deckViews.deckId,
+        title: decks.title,
+        views: sql<number>`count(*)::int`,
+      })
+      .from(deckViews)
+      .leftJoin(decks, eq(deckViews.deckId, decks.id))
+      .groupBy(deckViews.deckId, decks.title)
+      .orderBy(desc(sql`count(*)`))
+      .limit(5),
   ]);
 
   return NextResponse.json(
-    { metrics: { totalDecks, totalUsers, totalPaid, conversions } },
+    { metrics: { totalDecks, totalUsers, totalPaid, conversions, totalViews, topDecks } },
     { status: 200 }
   );
 }
