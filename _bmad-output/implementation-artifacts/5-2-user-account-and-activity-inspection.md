@@ -54,10 +54,23 @@ so that I can investigate issues and support users.
 
 ### Agent Model Used
 
-_to be filled_
+claude-sonnet-4-6
 
 ### Debug Log References
 
+- `TS2322` in `tests/admin/users.test.ts`: `mockUserDetailDb` default param inferred `stripeCustomerId` as `string`, blocking `null` in a test. Fixed by explicit function signature `user: typeof MOCK_USERS[0] & { stripeCustomerId: string | null }`.
+
 ### Completion Notes List
 
+- **User list API**: `GET /api/admin/users?page=1&search=<email>` — `src/app/api/admin/users/route.ts`. Uses `getAdminSession()` guard from Story 5.1. `ilike` for case-insensitive email search. Limit/offset pagination, 20/page. Response: `{ users: [...], pagination: { page, pageSize, total, totalPages } }`. `passwordHash` never selected.
+- **User detail API**: `GET /api/admin/users/:id` — `src/app/api/admin/users/[id]/route.ts`. Returns `{ user: {...}, decks: [...] }`. `stripeCustomerId` masked to last 4 chars (`****1234`) or `null`. Deck activity has no `slides` content (privacy). `slideCount` from `jsonb_array_length(slides)::int`. `isPublic` from `shareToken IS NOT NULL`.
+- **Pages**: Both use `requireAdmin()` from Story 5.1, `force-dynamic`. Breadcrumb nav Admin → Users → [email].
+- **Story 5.3 note**: Owns `/admin/logs`. No shared files with this story.
+
 ### File List
+
+- `src/app/api/admin/users/route.ts` — GET user list (paginated, searchable)
+- `src/app/api/admin/users/[id]/route.ts` — GET user detail + deck activity
+- `src/app/admin/users/page.tsx` — user list page (table, search form, pagination)
+- `src/app/admin/users/[id]/page.tsx` — user detail page (account + deck activity table)
+- `tests/admin/users.test.ts` — 13 tests (401, 403, list, search, pagination, detail, masking, privacy)
