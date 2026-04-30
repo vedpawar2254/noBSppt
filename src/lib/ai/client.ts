@@ -9,8 +9,10 @@
  */
 
 // Exported so generate/route.ts can log the actual model used (Story 5.3, AC4)
+// Default: gemini-2.0-flash — ~10x cheaper than Claude Haiku, reliable structured JSON output.
+// Override via OPENROUTER_MODEL env var. Full list: https://openrouter.ai/models
 export const OPENROUTER_MODEL =
-  process.env.OPENROUTER_MODEL ?? "anthropic/claude-haiku-4-5-20251001";
+  process.env.OPENROUTER_MODEL ?? "google/gemini-2.0-flash-001";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://nobsppt.com";
 
