@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   type InputMode,
   type GenerationPayload,
@@ -8,6 +9,7 @@ import {
 } from "@/lib/decks/validation";
 
 export default function DeckInputForm() {
+  const router = useRouter();
   const [mode, setMode] = useState<InputMode>("text");
   const [textContent, setTextContent] = useState("");
   const [outlineContent, setOutlineContent] = useState("");
@@ -19,6 +21,7 @@ export default function DeckInputForm() {
   function handleModeSwitch(newMode: InputMode) {
     setError(null);
     setMode(newMode);
+    // Content in both modes is preserved in separate state (AC2 from Story 2.1)
   }
 
   async function handleGenerate() {
@@ -37,11 +40,31 @@ export default function DeckInputForm() {
     };
 
     try {
-      // TODO: Story 2.2 — replace stub with POST /api/decks/generate
-      console.log("Generation payload:", payload);
+      const res = await fetch("/api/decks/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        // Redirect to the deck viewer (Story 2.3 creates this route)
+        router.push(`/deck/${data.deckId}`);
+        return;
+      }
+
+      if (res.status === 402) {
+        // Paywall — Epic 4 will provide proper UX; for now surface the message
+        setError("You've used all 3 free decks. Upgrade to continue generating.");
+      } else {
+        // NFR11: clear error. NFR12: input preserved in state — user can retry immediately.
+        setError(data.error ?? "Generation failed. Please try again.");
+      }
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError("Network error. Please check your connection and try again.");
     } finally {
+      // Loading state cleared regardless — input remains intact for retry (NFR12)
       setLoading(false);
     }
   }
@@ -82,8 +105,9 @@ export default function DeckInputForm() {
             id="text-input"
             value={textContent}
             onChange={(e) => setTextContent(e.target.value)}
+            disabled={loading}
             rows={12}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-black resize-y"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-black resize-y disabled:opacity-60 disabled:cursor-not-allowed"
             placeholder="Paste your notes, article, or any text here..."
           />
         </div>
@@ -99,8 +123,9 @@ export default function DeckInputForm() {
             id="outline-input"
             value={outlineContent}
             onChange={(e) => setOutlineContent(e.target.value)}
+            disabled={loading}
             rows={12}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-black resize-y font-mono"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-black resize-y font-mono disabled:opacity-60 disabled:cursor-not-allowed"
             placeholder={"Introduction\n- Background\n- Problem statement\nMain points\n- Point 1\n- Point 2\nConclusion"}
           />
           <p className="mt-1 text-xs text-gray-500">
@@ -109,22 +134,29 @@ export default function DeckInputForm() {
         </div>
       )}
 
-      {/* Validation error */}
+      {/* AC5 — NFR11: clear error displayed; NFR12: input intact for retry */}
       {error && (
         <p role="alert" className="text-sm text-red-600">
           {error}
         </p>
       )}
 
-      {/* Generate */}
+      {/* AC1 — loading state disables input during generation */}
       <button
         type="button"
         onClick={handleGenerate}
         disabled={loading}
         className="w-full py-2 px-4 bg-black text-white font-medium rounded-md text-sm hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {loading ? "Generating..." : "Generate Deck"}
+        {loading ? "Generating…" : "Generate Deck"}
       </button>
+
+      {/* AC1 — generation progress hint */}
+      {loading && (
+        <p className="text-xs text-center text-gray-400">
+          Distilling your content — usually under 15 seconds.
+        </p>
+      )}
     </div>
   );
 }

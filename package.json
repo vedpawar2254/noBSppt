@@ -15,30 +15,31 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "next": "14.2.29",
-    "react": "^18",
-    "react-dom": "^18",
-    "drizzle-orm": "^0.30.10",
-    "postgres": "^3.4.4",
+    "@anthropic-ai/sdk": "^0.91.1",
     "bcryptjs": "^2.4.3",
-    "jose": "^5.6.3"
+    "drizzle-orm": "^0.30.10",
+    "jose": "^5.6.3",
+    "next": "14.2.29",
+    "postgres": "^3.4.4",
+    "react": "^18",
+    "react-dom": "^18"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.4.6",
+    "@testing-library/react": "^16.0.0",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "@types/bcryptjs": "^2.4.6",
-    "typescript": "^5",
-    "tailwindcss": "^3.4.1",
-    "autoprefixer": "^10.0.1",
-    "postcss": "^8",
-    "drizzle-kit": "^0.21.4",
-    "vitest": "^1.6.0",
     "@vitejs/plugin-react": "^4.3.0",
-    "vite-tsconfig-paths": "^4.3.2",
-    "@testing-library/react": "^16.0.0",
-    "@testing-library/jest-dom": "^6.4.6",
+    "autoprefixer": "^10.0.1",
+    "drizzle-kit": "^0.21.4",
     "eslint": "^8",
-    "eslint-config-next": "14.2.29"
+    "eslint-config-next": "14.2.29",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5",
+    "vite-tsconfig-paths": "^4.3.2",
+    "vitest": "^1.6.0"
   }
 }
