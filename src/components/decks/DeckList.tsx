@@ -54,7 +54,13 @@ function DeckCard({ deck, onDeleted }: DeckCardProps) {
   return (
     <div className="border border-gray-200 rounded-lg p-4 flex items-start justify-between gap-4">
       <div className="flex-1 min-w-0">
-        <p className="font-medium text-gray-900 truncate">{deck.title}</p>
+        {/* AC4: clicking title opens the deck viewer (Story 2.3) */}
+        <Link
+          href={`/deck/${deck.id}`}
+          className="font-medium text-gray-900 hover:text-black truncate block hover:underline"
+        >
+          {deck.title}
+        </Link>
         <p className="text-xs text-gray-400 mt-1">{formatDate(deck.createdAt)}</p>
         {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
       </div>

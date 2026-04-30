@@ -61,13 +61,29 @@ so that I can review the output immediately after generation.
 
 ### Agent Model Used
 
-_to be filled_
+claude-sonnet-4-6
 
 ### Debug Log References
 
+- `tests/decks/viewer-route.test.ts` — `mockDeckNotFound()` did not return `chain`; test for AC3 UUID lookup asserted `chain.where` on `undefined`. Fixed by adding `return chain`.
+- `tests/setup.ts` — `@testing-library/jest-dom/vitest` import added so TS recognises extended matchers (`toBeInTheDocument`, `toBeDisabled`).
+- `tests/decks/viewer.test.tsx` + `viewer-route.test.ts` — `vi.clearAllMocks()` / `vi.restoreAllMocks()` return `VitestUtils` not `void`; concise arrow bodies caused TS2322. Fixed with block-body arrows `() => { vi.fn(); }`.
+
 ### Completion Notes List
 
-- Document viewer component path and props interface — Stories 3.1 and 3.3 reuse it.
-- Document creator route pattern `/deck/:id` — Story 3.1 creates the public equivalent.
+- `DeckViewer` component: `src/components/decks/DeckViewer.tsx`. Props interface `DeckViewerProps` exported — stable contract for Stories 3.1 (public viewer) and 3.3 (mobile). Pass `headerActions?: React.ReactNode` for injecting context-specific buttons.
+- `THEME_STYLES` map exported — add new theme entries there; component falls back to `"default"` for unknown themes.
+- Creator route `/deck/[id]` fetches with `AND(deckId, userId)` ownership check. Story 3.1 public route at `/share/[token]` should use `eq(decks.shareToken, token)` instead (no auth required).
+- `GET /api/decks/[id]` added alongside existing `DELETE` in `src/app/api/decks/[id]/route.ts`. Same ownership query pattern.
+- `DeckList` title link updated to `<Link href={\`/deck/${deck.id}\`}>` (AC4).
+- Pre-existing login/register tests timeout intermittently (bcrypt 12 rounds in CI) — not caused by Story 2.3.
 
 ### File List
+
+- `src/app/api/decks/[id]/route.ts` — added `GET` handler
+- `src/components/decks/DeckViewer.tsx` — new reusable viewer component
+- `src/app/deck/[id]/page.tsx` — new creator viewer route
+- `src/components/decks/DeckList.tsx` — deck title now links to `/deck/[id]`
+- `tests/decks/viewer-route.test.ts` — API GET route tests (node env)
+- `tests/decks/viewer.test.tsx` — DeckViewer component tests (jsdom)
+- `tests/setup.ts` — added `@testing-library/jest-dom/vitest` import
